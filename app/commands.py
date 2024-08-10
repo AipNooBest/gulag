@@ -355,7 +355,7 @@ async def recent(ctx: Context) -> Optional[str]:
                 "author": {
                     "name": f"{s.bmap.title} [{s.bmap.version}]{f' +{s.mods!r}' if f'{s.mods!r}' != 'NM' else ''} [{s.sr:.2f}★]",
                     "url": f"https://osu.ppy.sh/b/{s.bmap.id}",
-                    "icon_url": f"http://a.aipserver.ru/{s.player.id}",
+                    "icon_url": f"http://a.{app.settings.DOMAIN}/{s.player.id}",
                 },
                 "footer": {
                     "text": s.player.name + " • " + f"{s.mode!r}",
