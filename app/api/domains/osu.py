@@ -286,7 +286,9 @@ async def osuGetBeatmapInfo(
 
         ret.append(
             "{i}|{id}|{set_id}|{md5}|{status}|{grades}".format(
-                **row, i=idx, grades="|".join(grades)
+                **row,
+                i=idx,
+                grades="|".join(grades),
             ),
         )
 
@@ -813,7 +815,8 @@ async def osuSubmitModularSelector(
                 if score.mods:
                     ann.insert(1, f"+{score.mods!r}")
 
-                scoring_metric = "pp" if score.mode >= GameMode.RELAX_OSU else "score"
+                # scoring_metric = "pp" if score.mode >= GameMode.RELAX_OSU else "score"
+                scoring_metric = "score"
 
                 # If there was previously a score on the map, add old #1.
                 prev_n1 = await db_conn.fetch_one(
@@ -989,9 +992,7 @@ async def osuSubmitModularSelector(
             top_100_pp = best_scores[:100]
 
             # calculate new total weighted accuracy
-            weighted_acc = sum(
-                row["acc"] * 0.95**i for i, row in enumerate(top_100_pp)
-            )
+            weighted_acc = sum(row["acc"] * 0.95**i for i, row in enumerate(top_100_pp))
             bonus_acc = 100.0 / (20 * (1 - 0.95**total_scores))
             stats.acc = (weighted_acc * bonus_acc) / 100
 
@@ -1610,6 +1611,7 @@ _checkupdates_cache = {  # default timeout is 1h, set on request.
     "beta40": {"check": None, "path": None, "timeout": 0},
     "stable": {"check": None, "path": None, "timeout": 0},
 }
+
 
 # NOTE: this will only be triggered when using a server switcher.
 @router.get("/web/check-updates.php")

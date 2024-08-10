@@ -32,6 +32,7 @@ from typing import Union
 
 import cmyui.utils
 import psutil
+import requests as rq
 import timeago
 from peace_performance_python.objects import Beatmap as PeaceMap
 from peace_performance_python.objects import Calculator as PeaceCalculator
@@ -344,6 +345,29 @@ async def recent(ctx: Context) -> Optional[str]:
 
     l = [" ".join(l)]
 
+    embed = {
+        "content": None,
+        "embeds": [
+            {
+                "description": f"▸ **{s.grade.name}** ▸ **{s.pp:.2f}PP** ▸ {s.acc:.2f}%"
+                f"\n▸ {s.score} ▸ x{s.max_combo}/{s.bmap.max_combo} ▸ [{s.n300}/{s.n100}/{s.n50}/{s.nmiss}]",
+                "color": 57599,
+                "author": {
+                    "name": f"{s.bmap.title} [{s.bmap.version}]{f' +{s.mods!r}' if f'{s.mods!r}' != 'NM' else ''} [{s.sr:.2f}★]",
+                    "url": f"https://osu.ppy.sh/b/{s.bmap.id}",
+                    "icon_url": f"http://a.aipserver.ru/{s.player.id}",
+                },
+                "footer": {
+                    "text": s.player.name + " • " + f"{s.mode!r}",
+                },
+                "timestamp": s.server_time.__str__(),
+                "thumbnail": {
+                    "url": f"https://b.ppy.sh/thumb/{s.bmap.set_id}l.jpg",
+                },
+            },
+        ],
+    }
+
     if s.passed:
         rank = s.rank if s.status == SubmissionStatus.BEST else "NA"
         l.append(f"PASS {{{s.pp:.2f}pp #{rank}}}")
@@ -355,9 +379,13 @@ async def recent(ctx: Context) -> Optional[str]:
         if s.bmap.total_length != 0:
             completion = s.time_elapsed / (s.bmap.total_length * 1000)
             l.append(f"FAIL {{{completion * 100:.2f}% complete}})")
+            embed["embeds"][0][
+                "description"
+            ] += f"\n▸ Пройдено: {completion * 100:.2f}%"
         else:
             l.append("FAIL")
 
+    print(rq.post(app.settings.DISCORD_AUDIT_LOG_WEBHOOK, json=embed).reason)
     return " | ".join(l)
 
 
@@ -642,7 +670,7 @@ async def requests(ctx: Context) -> Optional[str]:
 
     l = [f"Total requests: {len(rows)}"]
 
-    for (map_id, player_id, dt) in rows:
+    for map_id, player_id, dt in rows:
         # find player & map for each row, and add to output.
         if not (p := await app.state.sessions.players.from_cache_or_sql(id=player_id)):
             l.append(f"Failed to find requesting player ({player_id})?")
@@ -1259,7 +1287,7 @@ async def recalc(ctx: Context) -> Optional[str]:
             ):
                 # TODO: should be aiter
                 for bmap_row in await bmap_select_conn.fetch_all(
-                    "SELECT id, md5 FROM maps WHERE passes > 0",
+                    "SELECT id, md5 FROM maps WHERE passes > 0 AND status = 2",
                 ):
                     bmap_id = bmap_row["id"]
                     bmap_md5 = bmap_row["md5"]
@@ -2664,7 +2692,7 @@ class CommandResponse(TypedDict):
 
 async def process_commands(
     p: Player,
-    target: Union["Channel", Player],
+    target: Union[Channel, Player],
     msg: str,
 ) -> Optional[CommandResponse]:
     # response is either a CommandResponse if we hit a command,
